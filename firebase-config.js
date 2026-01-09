@@ -1,9 +1,9 @@
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_AUTH_DOMAIN",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_STORAGE_BUCKET",
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-    appId: "YOUR_APP_ID",
-    measurementId: "YOUR_MEASUREMENT_ID"
+    apiKey: "AIzaSyC5G36djlzBuhNEzKzrvcJ_1-qvrTm1bOs",
+  authDomain: "qr-scanner-live-5b385.firebaseapp.com",
+  projectId: "qr-scanner-live-5b385",
+  storageBucket: "qr-scanner-live-5b385.firebasestorage.app",
+  messagingSenderId: "260207453177",
+  appId: "1:260207453177:web:ea438ade7b1b56270e1328",
+  measurementId: "G-WQEEHEPWG3"
 };
