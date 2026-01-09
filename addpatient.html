@@ -501,7 +501,7 @@
                     </div>
                     <div id="patient-list" class="patient-list">
                         <div class="empty-state">
-                            <p>No patient records found. Add a patient to get started.</p>
+                            <p>Please login to view patient records.</p>
                         </div>
                     </div>
                 </section>
@@ -513,13 +513,10 @@
         </footer>
     </div>
 
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"></script>
-    
-    <!-- External Firebase Configuration -->
-    <script src="firebase-config.js"></script>
+    <!-- Firebase SDK v8 (Compatibility version) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     
     <!-- JavaScript Application Logic -->
     <script>
@@ -552,15 +549,46 @@
             const userEmail = document.getElementById('user-email');
             const authError = document.getElementById('auth-error');
             
-            // Variables
+            // Firebase variables
+            let db;
+            let auth;
             let currentUser = null;
             let patients = [];
             
-            // Initialize the application
-            initApp();
+            // Initialize Firebase
+            function initializeFirebase() {
+                try {
+                    const firebaseConfig = {
+                        apiKey: "AIzaSyC5G36djlzBuhNEzKzrvcJ_1-qvrTm1bOs",
+                        authDomain: "qr-scanner-live-5b385.firebaseapp.com",
+                        projectId: "qr-scanner-live-5b385",
+                        storageBucket: "qr-scanner-live-5b385.firebasestorage.app",
+                        messagingSenderId: "260207453177",
+                        appId: "1:260207453177:web:ea438ade7b1b56270e1328",
+                        measurementId: "G-WQEEHEPWG3"
+                    };
+                    
+                    // Initialize Firebase
+                    firebase.initializeApp(firebaseConfig);
+                    db = firebase.firestore();
+                    auth = firebase.auth();
+                    
+                    console.log("Firebase initialized successfully");
+                    return true;
+                } catch (error) {
+                    console.error("Firebase initialization error:", error);
+                    showMessage("Error initializing Firebase. Please check your configuration.", "error");
+                    return false;
+                }
+            }
             
-            // Function to initialize the application
+            // Initialize the application
             function initApp() {
+                // Initialize Firebase first
+                if (!initializeFirebase()) {
+                    return;
+                }
+                
                 // Set max date for DOB to today
                 const today = new Date().toISOString().split('T')[0];
                 dobInput.max = today;
@@ -572,7 +600,7 @@
                 calculateAge();
                 
                 // Auth state observer
-                auth.onAuthStateChanged(user => {
+                auth.onAuthStateChanged(function(user) {
                     currentUser = user;
                     if (user) {
                         // User is signed in
@@ -773,7 +801,7 @@
                             id: doc.id,
                             ...data,
                             // Ensure we have a proper date object
-                            createdAt: data.createdAt || { toDate: () => new Date() }
+                            createdAt: data.createdAt || new Date()
                         });
                     });
                     
@@ -781,14 +809,20 @@
                     
                 } catch (error) {
                     console.error('Error loading patients:', error);
-                    patientList.innerHTML = '<div class="error">Error loading patients. Please try again.</div>';
+                    if (error.code === 'failed-precondition') {
+                        // Need to create an index
+                        patientList.innerHTML = '<div class="error">Please create a Firestore index. Check browser console for details.</div>';
+                        console.error('Firestore index error. You need to create a composite index in Firebase Console.');
+                    } else {
+                        patientList.innerHTML = '<div class="error">Error loading patients. Please try again.</div>';
+                    }
                 }
             }
             
             // Function to display patients in the list
             function displayPatients(patientsToDisplay) {
                 if (patientsToDisplay.length === 0) {
-                    patientList.innerHTML = '<div class="empty-state"><p>No patient records found.</p></div>';
+                    patientList.innerHTML = '<div class="empty-state"><p>No patient records found. Add your first patient!</p></div>';
                     return;
                 }
                 
@@ -809,7 +843,16 @@
                                 hour: '2-digit',
                                 minute: '2-digit'
                             });
-                        } else if (patient.createdAt) {
+                        } else if (patient.createdAt instanceof Date) {
+                            dateString = patient.createdAt.toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            });
+                        } else if (patient.createdAt && patient.createdAt.seconds) {
+                            // Firebase timestamp format
                             dateString = new Date(patient.createdAt.seconds * 1000).toLocaleDateString('en-US', {
                                 year: 'numeric',
                                 month: 'short',
@@ -943,8 +986,9 @@
                 
                 try {
                     authError.textContent = '';
-                    await auth.signInWithEmailAndPassword(email, password);
+                    const userCredential = await auth.signInWithEmailAndPassword(email, password);
                     loginPassword.value = ''; // Clear password field
+                    showMessage('Login successful!', 'success');
                 } catch (error) {
                     console.error('Login error:', error);
                     authError.textContent = `Login failed: ${error.message}`;
@@ -972,7 +1016,7 @@
                 
                 try {
                     authError.textContent = '';
-                    await auth.createUserWithEmailAndPassword(email, password);
+                    const userCredential = await auth.createUserWithEmailAndPassword(email, password);
                     showMessage('Account created successfully! You are now logged in.', 'success');
                     loginPassword.value = ''; // Clear password field
                 } catch (error) {
@@ -1000,14 +1044,17 @@
                 return re.test(email);
             }
             
-            // Initialize with a test account suggestion for first-time users
+            // Initialize the app
+            initApp();
+            
+            // Auto-fill test credentials for demo (remove in production)
             setTimeout(() => {
                 if (!loginEmail.value) {
                     loginEmail.value = "test@example.com";
                     loginPassword.value = "test123";
-                    authError.textContent = "Test credentials loaded. Click 'Sign Up' to create an account or 'Login' to use these test credentials.";
+                    authError.textContent = "Demo credentials loaded. Click 'Sign Up' to create an account or 'Login' to use these test credentials.";
                 }
-            }, 1000);
+            }, 500);
         });
     </script>
 </body>
