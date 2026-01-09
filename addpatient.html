@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Patient Management System1</title>
+    <title>Patient Management System</title>
     <style>
         /* CSS Styles */
         * {
@@ -376,6 +376,36 @@
             }
         }
 
+        /* Setup Instructions */
+        .setup-instructions {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            color: #856404;
+        }
+
+        .setup-instructions h3 {
+            margin-top: 0;
+            color: #856404;
+        }
+
+        .setup-instructions ol {
+            margin-left: 20px;
+        }
+
+        .setup-instructions li {
+            margin-bottom: 10px;
+        }
+
+        .setup-instructions code {
+            background-color: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+
         /* Responsive Design */
         @media (max-width: 1024px) {
             .content-wrapper {
@@ -431,6 +461,33 @@
                 </div>
             </div>
         </header>
+
+        <!-- Setup Instructions (shown only if not configured) -->
+        <div id="setup-instructions" class="setup-instructions" style="display: none;">
+            <h3>⚠️ Firebase Setup Required</h3>
+            <p>To use this application, you need to configure Firebase:</p>
+            <ol>
+                <li>Go to <a href="https://console.firebase.google.com/" target="_blank">Firebase Console</a></li>
+                <li>Select your project or create a new one</li>
+                <li>Enable Authentication: 
+                    <ul>
+                        <li>Go to "Authentication" → "Sign-in method"</li>
+                        <li>Click "Email/Password" and enable it</li>
+                        <li>Click "Save"</li>
+                    </ul>
+                </li>
+                <li>Enable Firestore Database:
+                    <ul>
+                        <li>Go to "Firestore Database" → "Create database"</li>
+                        <li>Start in production mode</li>
+                        <li>Set security rules:
+                            <code><br>rules_version = '2';<br>service cloud.firestore {<br>  match /databases/{database}/documents {<br>    match /scans/{docId} {<br>      allow read, write: if request.auth != null;<br>    }<br>  }<br>}</code>
+                        </li>
+                    </ul>
+                </li>
+                <li>Get your Firebase config and update it in the code below</li>
+            </ol>
+        </div>
 
         <main>
             <div class="content-wrapper">
@@ -537,6 +594,7 @@
             const searchInput = document.getElementById('search-input');
             const searchBtn = document.getElementById('search-btn');
             const resetSearchBtn = document.getElementById('reset-search');
+            const setupInstructions = document.getElementById('setup-instructions');
             
             // Auth elements
             const loginForm = document.getElementById('login-form');
@@ -555,19 +613,20 @@
             let currentUser = null;
             let patients = [];
             
+            // Firebase Configuration - UPDATE THIS WITH YOUR CONFIG
+            const firebaseConfig = {
+                apiKey: "AIzaSyC5G36djlzBuhNEzKzrvcJ_1-qvrTm1bOs",
+                authDomain: "qr-scanner-live-5b385.firebaseapp.com",
+                projectId: "qr-scanner-live-5b385",
+                storageBucket: "qr-scanner-live-5b385.firebasestorage.app",
+                messagingSenderId: "260207453177",
+                appId: "1:260207453177:web:ea438ade7b1b56270e1328",
+                measurementId: "G-WQEEHEPWG3"
+            };
+            
             // Initialize Firebase
             function initializeFirebase() {
                 try {
-                    const firebaseConfig = {
-                        apiKey: "AIzaSyC5G36djlzBuhNEzKzrvcJ_1-qvrTm1bOs",
-                        authDomain: "qr-scanner-live-5b385.firebaseapp.com",
-                        projectId: "qr-scanner-live-5b385",
-                        storageBucket: "qr-scanner-live-5b385.firebasestorage.app",
-                        messagingSenderId: "260207453177",
-                        appId: "1:260207453177:web:ea438ade7b1b56270e1328",
-                        measurementId: "G-WQEEHEPWG3"
-                    };
-                    
                     // Initialize Firebase
                     firebase.initializeApp(firebaseConfig);
                     db = firebase.firestore();
@@ -582,11 +641,44 @@
                 }
             }
             
+            // Test Firebase Connection
+            async function testFirebaseConnection() {
+                try {
+                    // Try to get auth state to test connection
+                    return new Promise((resolve) => {
+                        const unsubscribe = auth.onAuthStateChanged((user) => {
+                            unsubscribe();
+                            resolve(true);
+                        }, (error) => {
+                            console.error("Firebase connection test failed:", error);
+                            resolve(false);
+                        });
+                        
+                        // Timeout if no response
+                        setTimeout(() => {
+                            unsubscribe();
+                            resolve(false);
+                        }, 3000);
+                    });
+                } catch (error) {
+                    console.error("Connection test error:", error);
+                    return false;
+                }
+            }
+            
             // Initialize the application
-            function initApp() {
+            async function initApp() {
                 // Initialize Firebase first
                 if (!initializeFirebase()) {
+                    setupInstructions.style.display = 'block';
                     return;
+                }
+                
+                // Test Firebase connection
+                const isConnected = await testFirebaseConnection();
+                if (!isConnected) {
+                    setupInstructions.style.display = 'block';
+                    showMessage("Cannot connect to Firebase. Please check setup instructions.", "error");
                 }
                 
                 // Set max date for DOB to today
@@ -608,6 +700,7 @@
                         userInfo.style.display = 'block';
                         userEmail.textContent = user.email;
                         authError.textContent = '';
+                        setupInstructions.style.display = 'none';
                         
                         // Enable form and load patients
                         enableForm(true);
@@ -643,6 +736,50 @@
                 loginPassword.addEventListener('keyup', function(e) {
                     if (e.key === 'Enter') loginUser();
                 });
+                
+                // Create test user button for development
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                    createTestUserButton();
+                }
+            }
+            
+            // Create test user button for development
+            function createTestUserButton() {
+                const testBtn = document.createElement('button');
+                testBtn.id = 'test-user-btn';
+                testBtn.textContent = 'Create Test User';
+                testBtn.style.cssText = 'position: fixed; bottom: 20px; right: 20px; padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; z-index: 1000;';
+                testBtn.onclick = createTestUser;
+                document.body.appendChild(testBtn);
+            }
+            
+            // Create test user for development
+            async function createTestUser() {
+                try {
+                    // First try to sign up
+                    const email = 'test@example.com';
+                    const password = 'test123';
+                    
+                    const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                    showMessage('Test user created successfully! Email: test@example.com, Password: test123', 'success');
+                    
+                    // Auto-fill the login form
+                    loginEmail.value = email;
+                    loginPassword.value = password;
+                    
+                } catch (error) {
+                    if (error.code === 'auth/email-already-in-use') {
+                        // User already exists, try to login
+                        try {
+                            await auth.signInWithEmailAndPassword('test@example.com', 'test123');
+                            showMessage('Test user login successful!', 'success');
+                        } catch (loginError) {
+                            showMessage('Test user exists but password may be different. Please use your own credentials.', 'error');
+                        }
+                    } else {
+                        showMessage(`Error: ${error.message}`, 'error');
+                    }
+                }
             }
             
             // Function to calculate age from DOB
@@ -735,22 +872,8 @@
                     return false;
                 }
                 
-                // Validate ID card format (alphanumeric, at least 3 characters)
-                if (!/^[a-zA-Z0-9]{3,}$/.test(idCardInput.value.trim())) {
-                    showMessage('ID Card must be alphanumeric and at least 3 characters long', 'error');
-                    idCardInput.focus();
-                    return false;
-                }
-                
                 if (!contactInput.value.trim()) {
                     showMessage('Contact number is required', 'error');
-                    contactInput.focus();
-                    return false;
-                }
-                
-                // Basic contact number validation
-                if (!/^[0-9\+\-\s]{8,}$/.test(contactInput.value.trim())) {
-                    showMessage('Please enter a valid contact number', 'error');
                     contactInput.focus();
                     return false;
                 }
@@ -799,9 +922,7 @@
                         const data = doc.data();
                         patients.push({
                             id: doc.id,
-                            ...data,
-                            // Ensure we have a proper date object
-                            createdAt: data.createdAt || new Date()
+                            ...data
                         });
                     });
                     
@@ -811,11 +932,45 @@
                     console.error('Error loading patients:', error);
                     if (error.code === 'failed-precondition') {
                         // Need to create an index
-                        patientList.innerHTML = '<div class="error">Please create a Firestore index. Check browser console for details.</div>';
-                        console.error('Firestore index error. You need to create a composite index in Firebase Console.');
+                        patientList.innerHTML = '<div class="error">Database index required. Creating demo data...</div>';
+                        // Create some demo data
+                        createDemoData();
                     } else {
                         patientList.innerHTML = '<div class="error">Error loading patients. Please try again.</div>';
                     }
+                }
+            }
+            
+            // Create demo data if no patients exist
+            async function createDemoData() {
+                try {
+                    // Check if we have any data
+                    const snapshot = await db.collection('scans')
+                        .where('createdBy', '==', currentUser.uid)
+                        .limit(1)
+                        .get();
+                    
+                    if (snapshot.empty) {
+                        // Create demo patient
+                        const demoPatient = {
+                            name: "John Doe",
+                            idCard: "ID123456",
+                            address: "123 Main Street, Cityville",
+                            contact: "+1 555-0123",
+                            dob: "1985-06-15",
+                            age: 38,
+                            nationality: "US",
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                            createdBy: currentUser.uid,
+                            createdByEmail: currentUser.email
+                        };
+                        
+                        await db.collection('scans').add(demoPatient);
+                        showMessage('Demo patient created!', 'success');
+                        loadPatients();
+                    }
+                } catch (error) {
+                    console.error('Error creating demo data:', error);
                 }
             }
             
@@ -833,32 +988,13 @@
                     patientCard.className = 'patient-card';
                     
                     // Format the date
-                    let dateString = 'Date not available';
+                    let dateString = 'Recently added';
                     try {
                         if (patient.createdAt && patient.createdAt.toDate) {
                             dateString = patient.createdAt.toDate().toLocaleDateString('en-US', {
                                 year: 'numeric',
                                 month: 'short',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                            });
-                        } else if (patient.createdAt instanceof Date) {
-                            dateString = patient.createdAt.toLocaleDateString('en-US', {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                            });
-                        } else if (patient.createdAt && patient.createdAt.seconds) {
-                            // Firebase timestamp format
-                            dateString = new Date(patient.createdAt.seconds * 1000).toLocaleDateString('en-US', {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
+                                day: 'numeric'
                             });
                         }
                     } catch (error) {
@@ -969,7 +1105,7 @@
                 }, 3000);
             }
             
-            // Auth Functions
+            // Auth Functions with better error handling
             async function loginUser() {
                 const email = loginEmail.value.trim();
                 const password = loginPassword.value.trim();
@@ -985,13 +1121,35 @@
                 }
                 
                 try {
-                    authError.textContent = '';
+                    authError.textContent = 'Logging in...';
+                    loginBtn.disabled = true;
+                    signupBtn.disabled = true;
+                    
                     const userCredential = await auth.signInWithEmailAndPassword(email, password);
                     loginPassword.value = ''; // Clear password field
-                    showMessage('Login successful!', 'success');
+                    authError.textContent = '';
+                    
                 } catch (error) {
                     console.error('Login error:', error);
-                    authError.textContent = `Login failed: ${error.message}`;
+                    
+                    // Check if authentication is not enabled
+                    if (error.code === 'auth/configuration-not-found' || 
+                        error.code === 'auth/operation-not-allowed' ||
+                        error.message.includes('CONFIGURATION_NOT_FOUND')) {
+                        authError.textContent = 'Email/Password authentication is not enabled in Firebase. Please enable it in Firebase Console.';
+                        setupInstructions.style.display = 'block';
+                    } else if (error.code === 'auth/user-not-found') {
+                        authError.textContent = 'No user found with this email. Please sign up first.';
+                    } else if (error.code === 'auth/wrong-password') {
+                        authError.textContent = 'Incorrect password. Please try again.';
+                    } else if (error.code === 'auth/invalid-email') {
+                        authError.textContent = 'Invalid email address.';
+                    } else {
+                        authError.textContent = `Login failed: ${error.message}`;
+                    }
+                } finally {
+                    loginBtn.disabled = false;
+                    signupBtn.disabled = false;
                 }
             }
             
@@ -1015,17 +1173,31 @@
                 }
                 
                 try {
-                    authError.textContent = '';
+                    authError.textContent = 'Creating account...';
+                    loginBtn.disabled = true;
+                    signupBtn.disabled = true;
+                    
                     const userCredential = await auth.createUserWithEmailAndPassword(email, password);
                     showMessage('Account created successfully! You are now logged in.', 'success');
                     loginPassword.value = ''; // Clear password field
+                    authError.textContent = '';
+                    
                 } catch (error) {
                     console.error('Signup error:', error);
+                    
                     if (error.code === 'auth/email-already-in-use') {
                         authError.textContent = 'This email is already registered. Please login instead.';
+                    } else if (error.code === 'auth/operation-not-allowed') {
+                        authError.textContent = 'Email/Password authentication is not enabled. Please enable it in Firebase Console.';
+                        setupInstructions.style.display = 'block';
+                    } else if (error.code === 'auth/weak-password') {
+                        authError.textContent = 'Password is too weak. Please use a stronger password.';
                     } else {
                         authError.textContent = `Signup failed: ${error.message}`;
                     }
+                } finally {
+                    loginBtn.disabled = false;
+                    signupBtn.disabled = false;
                 }
             }
             
@@ -1035,6 +1207,7 @@
                     showMessage('Logged out successfully.', 'success');
                 } catch (error) {
                     console.error('Logout error:', error);
+                    showMessage(`Logout failed: ${error.message}`, 'error');
                 }
             }
             
@@ -1046,15 +1219,6 @@
             
             // Initialize the app
             initApp();
-            
-            // Auto-fill test credentials for demo (remove in production)
-            setTimeout(() => {
-                if (!loginEmail.value) {
-                    loginEmail.value = "test@example.com";
-                    loginPassword.value = "test123";
-                    authError.textContent = "Demo credentials loaded. Click 'Sign Up' to create an account or 'Login' to use these test credentials.";
-                }
-            }, 500);
         });
     </script>
 </body>
