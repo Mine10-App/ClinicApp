@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Management System</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📋 Patient Management System</h1>
+            <div class="auth-section">
+                <div id="login-form">
+                    <input type="email" id="login-email" placeholder="Email" required>
+                    <input type="password" id="login-password" placeholder="Password" required>
+                    <button id="login-btn">Login</button>
+                    <button id="signup-btn">Sign Up</button>
+                    <p id="auth-error" class="error-message"></p>
+                </div>
+                <div id="user-info" style="display: none;">
+                    <span>Logged in as: <span id="user-email"></span></span>
+                    <button id="logout-btn">Logout</button>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <div class="content-wrapper">
+                <section class="patient-form-section">
+                    <h2>Add New Patient</h2>
+                    <form id="patient-form">
+                        <div class="form-group">
+                            <label for="name">Full Name *</label>
+                            <input type="text" id="name" required>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="id-card">ID Card Number *</label>
+                                <input type="text" id="id-card" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="nationality">Nationality *</label>
+                                <select id="nationality" required>
+                                    <option value="">Select Nationality</option>
+                                    <option value="US">United States</option>
+                                    <option value="UK">United Kingdom</option>
+                                    <option value="CA">Canada</option>
+                                    <option value="AU">Australia</option>
+                                    <option value="IN">India</option>
+                                    <option value="CN">China</option>
+                                    <option value="JP">Japan</option>
+                                    <option value="DE">Germany</option>
+                                    <option value="FR">France</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="address">Address *</label>
+                            <textarea id="address" rows="3" required></textarea>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="contact">Contact Number *</label>
+                                <input type="tel" id="contact" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="dob">Date of Birth *</label>
+                                <input type="date" id="dob" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="age">Age</label>
+                                <input type="number" id="age" readonly>
+                            </div>
+                        </div>
+
+                        <div class="form-buttons">
+                            <button type="submit" id="save-btn">Save Patient</button>
+                            <button type="button" id="clear-btn">Clear Form</button>
+                        </div>
+                    </form>
+                </section>
+
+                <section class="patient-list-section">
+                    <h2>Patient Records</h2>
+                    <div class="search-container">
+                        <input type="text" id="search-input" placeholder="Search by name or ID...">
+                        <button id="search-btn">Search</button>
+                        <button id="reset-search">Reset</button>
+                    </div>
+                    <div id="patient-list" class="patient-list">
+                        <!-- Patient records will be loaded here -->
+                        <div class="empty-state">
+                            <p>No patient records found. Add a patient to get started.</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <footer>
+            <p>Patient Management System v1.0 | Secure & Confidential</p>
+        </footer>
+    </div>
+
+    <!-- JavaScript Files -->
+    <script src="firebase-config.js"></script>
+    <script src="addpatient.js"></script>
+</body>
+</html>
