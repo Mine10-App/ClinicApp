@@ -1,11 +1,10 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MediCare - Patient Management System</title>
-    <!-- All CSS styles remain the same as your original code -->
+    <!-- Same CSS styles as before -->
     <style>
         * {
             margin: 0;
@@ -674,53 +673,6 @@
             margin-top: 5px;
         }
 
-        /* Public Data Section */
-        .public-data-section {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            margin-bottom: 25px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-            border: 2px solid #e3f2ff;
-        }
-
-        .public-data-section h3 {
-            color: #1e6fd9;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .public-data-section h3::before {
-            content: "📊";
-        }
-
-        .public-data-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 15px;
-        }
-
-        .public-data-item {
-            background: #f8fbff;
-            padding: 15px;
-            border-radius: 8px;
-            border-left: 4px solid #4CAF50;
-        }
-
-        .public-data-item h4 {
-            color: #2c5282;
-            margin-bottom: 8px;
-            font-size: 16px;
-        }
-
-        .public-data-item p {
-            color: #4a5568;
-            font-size: 14px;
-            margin-bottom: 5px;
-        }
-
         /* Responsive Design */
         @media (max-width: 1200px) {
             .content-wrapper {
@@ -729,10 +681,6 @@
             }
             
             .patient-details {
-                grid-template-columns: 1fr;
-            }
-            
-            .public-data-grid {
                 grid-template-columns: 1fr;
             }
         }
@@ -858,14 +806,6 @@
             <p>For detailed setup, refer to Firebase documentation.</p>
         </div>
 
-        <!-- Public Data Section (Service Firebase) -->
-        <div id="public-data-section" class="public-data-section" style="display: none;">
-            <h3>Public Clinic Information</h3>
-            <div id="public-data-content" class="public-data-grid">
-                <!-- Public data will be loaded here from service Firebase -->
-            </div>
-        </div>
-
         <!-- Statistics Bar -->
         <div id="stats-bar" class="stats-bar" style="display: none;">
             <div class="stat-item">
@@ -879,10 +819,6 @@
             <div class="stat-item">
                 <span class="stat-number" id="avg-age">0</span>
                 <span class="stat-label">Average Age</span>
-            </div>
-            <div class="stat-item">
-                <span class="stat-number" id="global-patients">0</span>
-                <span class="stat-label">Global Patients</span>
             </div>
         </div>
 
@@ -1004,7 +940,8 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     
-    <!-- External Firebase Service Configuration -->
+    <!-- External Firebase Configurations -->
+    <script src="firebase-main.js"></script>
     <script src="firebase-service.js"></script>
     
     <!-- JavaScript Application Logic -->
@@ -1029,15 +966,12 @@
             const resetSearchBtn = document.getElementById('reset-search');
             const setupInstructions = document.getElementById('setup-instructions');
             const statsBar = document.getElementById('stats-bar');
-            const publicDataSection = document.getElementById('public-data-section');
-            const publicDataContent = document.getElementById('public-data-content');
             const serviceStatus = document.getElementById('service-status');
             
             // Stats elements
             const totalPatientsEl = document.getElementById('total-patients');
             const todayPatientsEl = document.getElementById('today-patients');
             const avgAgeEl = document.getElementById('avg-age');
-            const globalPatientsEl = document.getElementById('global-patients');
             
             // Auth elements
             const loginForm = document.getElementById('login-form');
@@ -1051,44 +985,36 @@
             const authError = document.getElementById('auth-error');
             
             // Firebase variables
-            let mainDb;  // Main database (requires auth)
+            let mainDb;  // Main database (for authentication only)
             let mainAuth; // Main auth
-            let serviceDb; // Service database (no auth required)
+            let serviceDb; // Service database (for all data operations)
             let currentUser = null;
             let patients = [];
-            let publicClinics = [];
-            let globalStats = { totalPatients: 0 };
             
-            // Initialize both Firebase apps
+            // Initialize Firebase apps from external files
             function initializeFirebase() {
                 try {
-                    // First Firebase App (Main - with authentication)
-                    const firebaseMainConfig = {
-                        apiKey: "AIzaSyC5G36djlzBuhNEzKzrvcJ_1-qvrTm1bOs",
-                        authDomain: "qr-scanner-live-5b385.firebaseapp.com",
-                        projectId: "qr-scanner-live-5b385",
-                        storageBucket: "qr-scanner-live-5b385.firebasestorage.app",
-                        messagingSenderId: "260207453177",
-                        appId: "1:260207453177:web:ea438ade7b1b56270e1328",
-                        measurementId: "G-WQEEHEPWG3"
-                    };
+                    // Get Firebase instances from external files
+                    // These are initialized in firebase-main.js and firebase-service.js
                     
-                    // Initialize Main Firebase App (default)
-                    const mainApp = firebase.initializeApp(firebaseMainConfig, "mainApp");
+                    // Get main app for authentication
+                    const mainApp = firebase.app("mainApp");
+                    if (!mainApp) {
+                        throw new Error("Main Firebase app not found. Check firebase-main.js");
+                    }
                     mainDb = firebase.firestore(mainApp);
                     mainAuth = firebase.auth(mainApp);
                     
-                    console.log("Main Firebase app initialized successfully");
+                    console.log("Main Firebase app loaded successfully");
                     
-                    // Get service app from external file
-                    // This assumes firebase-service.js has already initialized "serviceApp"
-                    try {
-                        const serviceApp = firebase.app("serviceApp");
+                    // Get service app for data operations
+                    const serviceApp = firebase.app("serviceApp");
+                    if (serviceApp) {
                         serviceDb = firebase.firestore(serviceApp);
-                        console.log("Service Firebase app loaded from external file");
+                        console.log("Service Firebase app loaded successfully");
                         serviceStatus.textContent = "Service Status: Connected ✓";
-                    } catch (error) {
-                        console.warn("Service app not found, continuing without it");
+                    } else {
+                        console.warn("Service Firebase app not found");
                         serviceStatus.textContent = "Service Status: Not connected";
                     }
                     
@@ -1117,9 +1043,6 @@
                 defaultDate.setFullYear(defaultDate.getFullYear() - 18);
                 dobInput.value = defaultDate.toISOString().split('T')[0];
                 calculateAge();
-                
-                // Load public data from service Firebase (no auth required)
-                loadPublicData();
                 
                 // Auth state observer
                 mainAuth.onAuthStateChanged(function(user) {
@@ -1170,62 +1093,6 @@
                 // Create test user button for development
                 if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
                     createTestUserButton();
-                }
-            }
-            
-            // Load public data from service Firebase (no authentication required)
-            async function loadPublicData() {
-                if (!serviceDb) {
-                    console.log("Service database not available");
-                    return;
-                }
-                
-                try {
-                    serviceStatus.textContent = "Service Status: Loading public data...";
-                    
-                    // Load public clinics
-                    const clinicsSnapshot = await serviceDb.collection('publicClinics').limit(5).get();
-                    
-                    if (!clinicsSnapshot.empty) {
-                        publicClinics = [];
-                        publicDataSection.style.display = 'block';
-                        publicDataContent.innerHTML = '';
-                        
-                        clinicsSnapshot.forEach(doc => {
-                            const clinic = doc.data();
-                            publicClinics.push(clinic);
-                            
-                            const clinicItem = document.createElement('div');
-                            clinicItem.className = 'public-data-item';
-                            clinicItem.innerHTML = `
-                                <h4>🏥 ${clinic.name || 'Clinic'}</h4>
-                                ${clinic.location ? `<p><strong>📍 Location:</strong> ${clinic.location}</p>` : ''}
-                                ${clinic.specialty ? `<p><strong>🎯 Specialty:</strong> ${clinic.specialty}</p>` : ''}
-                                ${clinic.contact ? `<p><strong>📞 Contact:</strong> ${clinic.contact}</p>` : ''}
-                                ${clinic.hours ? `<p><strong>🕐 Hours:</strong> ${clinic.hours}</p>` : ''}
-                            `;
-                            publicDataContent.appendChild(clinicItem);
-                        });
-                        
-                        console.log("Loaded public clinics data from service Firebase");
-                    }
-                    
-                    // Load global statistics
-                    try {
-                        const statsDoc = await serviceDb.collection('globalStats').doc('summary').get();
-                        if (statsDoc.exists) {
-                            globalStats = statsDoc.data();
-                            globalPatientsEl.textContent = globalStats.totalPatients || '0';
-                        }
-                    } catch (statsError) {
-                        console.warn("Could not load global stats:", statsError);
-                    }
-                    
-                    serviceStatus.textContent = "Service Status: Connected ✓";
-                    
-                } catch (error) {
-                    console.warn("Could not load public data:", error.message);
-                    serviceStatus.textContent = "Service Status: Error loading data";
                 }
             }
             
@@ -1292,12 +1159,17 @@
                 saveBtn.innerHTML = enabled ? '<span>💾</span> Save Patient Record' : '<span>🔒</span> Please Login to Save';
             }
             
-            // Function to save patient to Firestore
+            // Function to save patient to Firestore (Service Database)
             async function savePatient(e) {
                 e.preventDefault();
                 
                 if (!currentUser) {
                     showMessage('Please login to save patient records.', 'error');
+                    return;
+                }
+                
+                if (!serviceDb) {
+                    showMessage('Service database not available. Please check connection.', 'error');
                     return;
                 }
                 
@@ -1327,36 +1199,8 @@
                         lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
                     };
                     
-                    // Save to Main Database
-                    await mainDb.collection('scans').add(patient);
-                    
-                    // Save anonymized data to Service Database (if available)
-                    if (serviceDb) {
-                        try {
-                            const anonymizedPatient = {
-                                age: patient.age,
-                                bloodGroup: patient.bloodGroup,
-                                nationality: patient.nationality,
-                                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                                isAnonymous: true
-                            };
-                            
-                            await serviceDb.collection('patientStats').add(anonymizedPatient);
-                            
-                            // Update global stats
-                            const newTotal = (globalStats.totalPatients || 0) + 1;
-                            globalStats.totalPatients = newTotal;
-                            globalPatientsEl.textContent = newTotal;
-                            
-                            await serviceDb.collection('globalStats').doc('summary').set({
-                                totalPatients: newTotal,
-                                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-                            }, { merge: true });
-                            
-                        } catch (serviceError) {
-                            console.warn("Could not save to service database:", serviceError);
-                        }
-                    }
+                    // Save to Service Database (clinicappser)
+                    await serviceDb.collection('patients').add(patient);
                     
                     showMessage('Patient record saved successfully!', 'success');
                     clearForm();
@@ -1419,13 +1263,19 @@
                 return true;
             }
             
-            // Function to load patients from Main Database
+            // Function to load patients from Service Database
             async function loadPatients() {
                 try {
                     patientList.innerHTML = '<div class="loading">Loading patient records...</div>';
                     
-                    const snapshot = await mainDb.collection('scans')
+                    if (!serviceDb) {
+                        throw new Error("Service database not available");
+                    }
+                    
+                    // Load patients from service database where createdBy matches current user
+                    const snapshot = await serviceDb.collection('patients')
                         .where('createdBy', '==', currentUser.uid)
+                        .orderBy('createdAt', 'desc')
                         .get();
                     
                     patients = [];
@@ -1438,14 +1288,12 @@
                         });
                     });
                     
-                    patients.sort((a, b) => b.timestamp - a.timestamp);
-                    
                     displayPatients(patients);
                     updateStats(patients);
                     
                 } catch (error) {
                     console.error('Error loading patients:', error);
-                    patientList.innerHTML = '<div class="error">⚠️ Error loading patient records.</div>';
+                    patientList.innerHTML = '<div class="error">⚠️ Error loading patient records. ' + error.message + '</div>';
                 }
             }
             
@@ -1550,7 +1398,7 @@
                 });
             }
             
-            // Function to delete a patient
+            // Function to delete a patient from Service Database
             async function deletePatient(e) {
                 const patientId = e.target.getAttribute('data-id');
                 
@@ -1558,8 +1406,13 @@
                     return;
                 }
                 
+                if (!serviceDb) {
+                    showMessage('Service database not available', 'error');
+                    return;
+                }
+                
                 try {
-                    await mainDb.collection('scans').doc(patientId).delete();
+                    await serviceDb.collection('patients').doc(patientId).delete();
                     showMessage('Patient record deleted successfully!', 'success');
                     loadPatients();
                 } catch (error) {
@@ -1626,7 +1479,7 @@
                 }, 4000);
             }
             
-            // Auth Functions
+            // Auth Functions (using mainAuth from main Firebase)
             async function loginUser() {
                 const email = loginEmail.value.trim();
                 const password = loginPassword.value.trim();
